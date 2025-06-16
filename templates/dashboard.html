@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h2>
+    <div class="text-muted">Welcome, {{ session['username'] }} ({{ session['role'] }})</div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <i class="fas fa-truck"></i>
+            <div class="number">{{ vehicle_count }}</div>
+            <div class="label">Total Vehicles</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <i class="fas fa-users"></i>
+            <div class="number">{{ driver_count }}</div>
+            <div class="label">Total Drivers</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <i class="fas fa-clipboard-check"></i>
+            <div class="number">{{ assignment_count }}</div>
+            <div class="label">Active Assignments</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div class="number">{{ compliance_issues|length }}</div>
+            <div class="label">Compliance Issues</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 mb-6">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <i class="fas fa-list-check me-2"></i>Recent Activities
+            </div>
+            <div class="card-body activity-log">
+                {% for activity in activities %}
+                <div class="activity-item">
+                    <div class="d-flex justify-content-between">
+                        <strong>{{ activity.user.username }}</strong>
+                        <small class="text-muted">{{ activity.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+                    </div>
+                    <div>{{ activity.action }}</div>
+                    {% if activity.details %}
+                    <div class="text-muted small">{{ activity.details }}</div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-3">No recent activities</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <i class="fas fa-exclamation-triangle me-2"></i>Compliance Issues
+            </div>
+            <div class="card-body">
+                {% if compliance_issues %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Vehicle</th>
+                                <th>Issue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for issue in compliance_issues %}
+                            <tr>
+                                <td>{{ issue[0] }}</td>
+                                <td class="text-danger">{{ issue[3] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <a href="/vehicles" class="btn btn-sm btn-warning w-100 mt-2">Manage Vehicles</a>
+                {% else %}
+                <div class="alert alert-success mb-0">No compliance issues</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <i class="fas fa-tools me-2"></i>Upcoming Maintenance
+            </div>
+            <div class="card-body">
+                {% if maintenance_due %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Vehicle</th>
+                                <th>Due Date</th>
+                                <th>Center</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for vehicle in maintenance_due %}
+                            <tr>
+                                <td>{{ vehicle[0] }}</td>
+                                <td>{{ vehicle[3] }}</td>
+                                <td>{{ vehicle[4] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info mb-0">No upcoming maintenance</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <i class="fas fa-car me-2"></i>Recent Vehicle Additions
+            </div>
+            <div class="card-body">
+                {% if vehicles %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Plate</th>
+                                <th>Type</th>
+                                <th>Make</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for vehicle in vehicles[:5] %}
+                            <tr>
+                                <td>{{ vehicle.plate_number }}</td>
+                                <td>{{ vehicle.vehicle_type }}</td>
+                                <td>{{ vehicle.make }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <a href="/vehicles" class="btn btn-sm btn-primary w-100 mt-2">View All Vehicles</a>
+                {% else %}
+                <div class="alert alert-info mb-0">No vehicles found</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

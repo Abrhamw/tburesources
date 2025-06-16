@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/leaflet.css" />
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize map
+        const map = L.map('gps-map').setView([9.005401, 38.763611], 6);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Set initial position if exists
+        const initialPosition = "{{ assignment.gps_position }}";
+        if (initialPosition) {
+            const [lat, lng] = initialPosition.split(',').map(Number);
+            map.setView([lat, lng], 12);
+            L.marker([lat, lng]).addTo(map)
+                .bindPopup("{{ assignment.work_place }}")
+                .openPopup();
+        }
+        
+        // Handle city selection change
+        document.getElementById('work_place').addEventListener('change', function() {
+            const city = this.value;
+            if (city) {
+                fetch(`/get_gps/${city}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.lat && data.lng) {
+                            map.setView([data.lat, data.lng], 12);
+                            
+                            // Clear existing markers
+                            map.eachLayer(layer => {
+                                if (layer instanceof L.Marker) {
+                                    map.removeLayer(layer);
+                                }
+                            });
+                            
+                            // Add new marker
+                            L.marker([data.lat, data.lng]).addTo(map)
+                                .bindPopup(city)
+                                .openPopup();
+                        }
+                    });
+            }
+        });
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-edit me-2"></i>Edit Assignment</h2>
+    <a href="/assignments" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-1"></i>Back to Assignments
+    </a>
+</div>
+
+<div class="dashboard-card">
+    <div class="card-header">
+        <i class="fas fa-map-marked-alt me-2"></i>Assignment Details
+    </div>
+    <div class="card-body">
+        <form method="POST" action="/assignments/edit/{{ assignment.id }}">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Select Vehicle</label>
+                    <select class="form-select" name="plate_number" required>
+                        {% for vehicle in vehicles %}
+                        <option value="{{ vehicle.plate_number }}" 
+                            {% if assignment.plate_number == vehicle.plate_number %}selected{% endif %}>
+                            {{ vehicle.plate_number }} ({{ vehicle.make }} {{ vehicle.model }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Select Driver</label>
+                    <select class="form-select" name="driver_id" required>
+                        {% for driver in drivers %}
+                        <option value="{{ driver.id }}" 
+                            {% if assignment.driver_id == driver.id %}selected{% endif %}>
+                            {{ driver.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Work Place (City)</label>
+                <select class="form-select" id="work_place" name="work_place" required>
+                    <option value="" disabled>Select City</option>
+                    {% for city in cities %}
+                    <option value="{{ city }}" 
+                        {% if assignment.work_place == city %}selected{% endif %}>
+                        {{ city }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">GPS Location Preview</label>
+                <div id="gps-map" class="gps-map">
+                    <p class="text-muted">Select a city to see GPS location</p>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" class="form-control" name="start_date" 
+                           value="{{ assignment.start_date.strftime('%Y-%m-%d') }}" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">End Date (Optional)</label>
+                    <input type="date" class="form-control" name="end_date" 
+                           value="{% if assignment.end_date %}{{ assignment.end_date.strftime('%Y-%m-%d') }}{% endif %}">
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Geofence Violations</label>
+                <input type="number" class="form-control" name="geofence_violations" 
+                       value="{{ assignment.geofence_violations }}" min="0">
+            </div>
+            
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-save me-2"></i>Update Assignment
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
