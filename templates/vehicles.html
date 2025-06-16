@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}Vehicle Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Vehicle Management</h1>
+        <a href="{{ url_for('manage_vehicles') }}" class="btn btn-primary">
+            <i class="fa-solid fa-plus"></i> Add Vehicle
+        </a>
+    </div>
+    
+    {% if filter %}
+    <div class="alert alert-info">
+        Showing vehicles of type: <strong>{{ filter }}</strong>
+        <a href="{{ url_for('manage_vehicles') }}" class="float-end">Clear filter</a>
+    </div>
+    {% endif %}
+    
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Plate Number</th>
+                            <th>Type</th>
+                            <th>Make/Model</th>
+                            <th>Year</th>
+                            <th>Fuel Type</th>
+                            <th>Assigned For</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vehicle in vehicles %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('vehicle_details', plate_number=vehicle.plate_number) }}">
+                                    {{ vehicle.plate_number }}
+                                </a>
+                            </td>
+                            <td>{{ vehicle.vehicle_type }}</td>
+                            <td>{{ vehicle.make }} {{ vehicle.model }}</td>
+                            <td>{{ vehicle.year }}</td>
+                            <td>{{ vehicle.fuel_type }}</td>
+                            <td>{{ vehicle.assigned_for }}</td>
+                            <td>
+                                <a href="{{ url_for('edit_vehicle', plate_number=vehicle.plate_number) }}" 
+                                   class="btn btn-sm btn-warning">
+                                    <i class="fa-solid fa-pen-to-square"></i> Edit
+                                </a>
+                                <a href="{{ url_for('delete_vehicle', plate_number=vehicle.plate_number) }}" 
+                                   class="btn btn-sm btn-danger"
+                                   onclick="return confirm('Are you sure you want to delete this vehicle?');">
+                                    <i class="fa-solid fa-trash"></i> Delete
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center">No vehicles found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

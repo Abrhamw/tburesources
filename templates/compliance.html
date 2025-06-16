@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-file-contract me-2"></i>Compliance for: {{ vehicle.plate_number }}</h2>
+    <a href="/vehicles" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-1"></i>Back to Vehicles
+    </a>
+</div>
+
+<div class="dashboard-card">
+    <div class="card-header">
+        <i class="fas fa-clipboard-check me-2"></i>Compliance Details
+    </div>
+    <div class="card-body">
+        <form method="POST" action="/compliance/{{ vehicle.plate_number }}">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Insurance Type</label>
+                    <select class="form-select" name="insurance_type" required>
+                        {% for type in ['Fully Insured', 'Partial'] %}
+                        <option value="{{ type }}" {% if compliance and compliance.insurance_type == type %}selected{% endif %}>{{ type }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Insurance Date</label>
+                    <input type="date" class="form-control" name="insurance_date" 
+                           value="{{ compliance.insurance_date if compliance else '' }}">
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Yearly Inspection</label>
+                    <select class="form-select" name="yearly_inspection" required>
+                        {% for type in ['Yes', 'No'] %}
+                        <option value="{{ type }}" {% if compliance and compliance.yearly_inspection == type %}selected{% endif %}>{{ type }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Inspection Date</label>
+                    <input type="date" class="form-control" name="inspection_date" 
+                           value="{{ compliance.inspection_date if compliance else '' }}">
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Safety Audit</label>
+                    <select class="form-select" name="safety_audit" required>
+                        {% for type in ['Safe', 'Fair', 'Not Safe'] %}
+                        <option value="{{ type }}" {% if compliance and compliance.safety_audit == type %}selected{% endif %}>{{ type }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Utilization History</label>
+                    <textarea class="form-control" name="utilization_history" rows="3">{{ compliance.utilization_history if compliance else '' }}</textarea>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Accident History</label>
+                    <textarea class="form-control" name="accident_history" rows="3">{{ compliance.accident_history if compliance else '' }}</textarea>
+                </div>
+            </div>
+            
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-save me-2"></i>Save Compliance Info
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,275 @@
+{% extends 'base.html' %}
+
+{% block title %}Reports - Fleet Management System{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h1 class="mb-4">Fleet Management Reports</h1>
+    
+    <!-- Summary Cards -->
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title">Total Vehicles</h5>
+                            <h2 class="card-text">{{ vehicle_count }}</h2>
+                        </div>
+                        <i class="fa-solid fa-car fa-3x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title">Total Drivers</h5>
+                            <h2 class="card-text">{{ driver_count }}</h2>
+                        </div>
+                        <i class="fa-solid fa-id-card fa-3x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-info mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title">Active Assignments</h5>
+                            <h2 class="card-text">{{ assignment_count }}</h2>
+                        </div>
+                        <i class="fa-solid fa-clipboard-list fa-3x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Assignment Distribution Chart -->
+    <div class="row mt-5">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4><i class="fa-solid fa-chart-pie"></i> Vehicle Assignment Distribution</h4>
+                </div>
+                <div class="card-body">
+                    <div style="height: 300px;">
+                        <canvas id="assignmentChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h4><i class="fa-solid fa-list"></i> Assignment Types</h4>
+                </div>
+                <div class="card-body" style="max-height: 350px; overflow-y: auto;">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Assignment Type</th>
+                                <th>Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for assignment in assignment_distribution %}
+                            <tr>
+                                <td>{{ assignment[0] }}</td>
+                                <td>{{ assignment[1] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Detailed Reports -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4><i class="fa-solid fa-car"></i> Vehicle Analysis</h4>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="vehicleChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h4><i class="fa-solid fa-users"></i> Driver Analysis</h4>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="driverChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Assignments -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h4><i class="fa-solid fa-map-location-dot"></i> GPS Tracking</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Vehicle</th>
+                                    <th>Driver</th>
+                                    <th>Work Place</th>
+                                    <th>GPS Position</th>
+                                    <th>Violations</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for assignment in active_assignments %}
+                                <tr>
+                                    <td>{{ assignment.vehicle.plate_number }}</td>
+                                    <td>{{ assignment.driver.name }}</td>
+                                    <td>{{ assignment.work_place }}</td>
+                                    <td>{{ assignment.gps_position }}</td>
+                                    <td>{{ assignment.geofence_violations }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Vehicle Type Distribution Chart
+    const vehicleCtx = document.getElementById('vehicleChart').getContext('2d');
+    new Chart(vehicleCtx, {
+        type: 'pie',
+        data: {
+            labels: [
+                {% for vehicle in vehicle_types %}
+                    "{{ vehicle[0] }}",
+                {% endfor %}
+            ],
+            datasets: [{
+                data: [
+                    {% for vehicle in vehicle_types %}
+                        {{ vehicle[1] }},
+                    {% endfor %}
+                ],
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                    '#9966FF', '#FF9F40', '#8AC926', '#1982C4',
+                    '#6A4C93', '#F15BB5'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                }
+            }
+        }
+    });
+
+    // Driver Reporting Structure Chart
+    const driverCtx = document.getElementById('driverChart').getContext('2d');
+    new Chart(driverCtx, {
+        type: 'bar',
+        data: {
+            labels: [
+                {% for driver in driver_reporting %}
+                    "{{ driver[0] }}",
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Drivers',
+                data: [
+                    {% for driver in driver_reporting %}
+                        {{ driver[1] }},
+                    {% endfor %}
+                ],
+                backgroundColor: '#FFCE56'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+
+    // Assignment Distribution Chart
+    const assignmentCtx = document.getElementById('assignmentChart').getContext('2d');
+    new Chart(assignmentCtx, {
+        type: 'doughnut',
+        data: {
+            labels: [
+                {% for assignment in assignment_distribution %}
+                    "{{ assignment[0] }}",
+                {% endfor %}
+            ],
+            datasets: [{
+                data: [
+                    {% for assignment in assignment_distribution %}
+                        {{ assignment[1] }},
+                    {% endfor %}
+                ],
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                    '#9966FF', '#FF9F40', '#8AC926', '#1982C4',
+                    '#6A4C93', '#F15BB5', '#00BBF9', '#00F5D4'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.raw || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = Math.round((value / total) * 100);
+                            return `${label}: ${value} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}
