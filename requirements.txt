@@ -1,5 +1,2 @@
 Flask
-Flask-SQLAlchemy
-SQLAlchemy
-Werkzeug
 unicorn
