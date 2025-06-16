@@ -4,4 +4,4 @@ SQLAlchemy==2.0.23
 Werkzeug==3.0.1  # For password hashing
 python-dotenv==1.0.0  # For environment variables (recommended)
 unicorn
-python==3
+python
