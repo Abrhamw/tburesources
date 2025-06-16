@@ -2,5 +2,5 @@
 Flask-SQLAlchemy
 SQLAlchemy
 Werkzeug
-unicord
+unicorn
 python-dotenv
