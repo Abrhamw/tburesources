@@ -289,7 +289,7 @@ def login():
             log_activity(user.id, 'Login', f"User {username} logged in")
             
             flash('Login successful!', 'success')
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('index'))
         else:
             flash('Invalid username or password', 'danger')
     
