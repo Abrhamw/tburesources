@@ -1,69 +1,175 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
-{% block title %}Assignment Management{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/leaflet.css" />
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize map
+        const map = L.map('gps-map').setView([9.005401, 38.763611], 6);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Handle city selection change
+        document.getElementById('work_place').addEventListener('change', function() {
+            const city = this.value;
+            if (city) {
+                fetch(`/get_gps/${city}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.lat && data.lng) {
+                            map.setView([data.lat, data.lng], 12);
+                            
+                            // Clear existing markers
+                            map.eachLayer(layer => {
+                                if (layer instanceof L.Marker) {
+                                    map.removeLayer(layer);
+                                }
+                            });
+                            
+                            // Add new marker
+                            L.marker([data.lat, data.lng]).addTo(map)
+                                .bindPopup(city)
+                                .openPopup();
+                        }
+                    });
+            }
+        });
+    });
+</script>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Assignment Management</h1>
-        <a href="{{ url_for('manage_assignments') }}" class="btn btn-primary">
-            <i class="fa-solid fa-plus"></i> Create Assignment
-        </a>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-map-marked-alt me-2"></i>Assignment Management</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAssignmentModal">
+        <i class="fas fa-plus-circle me-2"></i>Add Assignment
+    </button>
+</div>
+
+<div class="dashboard-card">
+    <div class="card-header">
+        <i class="fas fa-list me-2"></i>Current Assignments
     </div>
-    
-    {% if filter %}
-    <div class="alert alert-info">
-        Showing assignments for: <strong>{{ filter }}</strong>
-        <a href="{{ url_for('manage_assignments') }}" class="float-end">Clear filter</a>
-    </div>
-    {% endif %}
-    
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Vehicle</th>
-                            <th>Driver</th>
-                            <th>Work Place</th>
-                            <th>Start Date</th>
-                            <th>End Date</th>
-                            <th>GPS Position</th>
-                            <th>Violations</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for assignment in assignments %}
-                        <tr>
-                            <td>{{ assignment.vehicle.plate_number }}</td>
-                            <td>{{ assignment.driver.name }}</td>
-                            <td>{{ assignment.work_place }}</td>
-                            <td>{{ assignment.start_date.strftime('%Y-%m-%d') }}</td>
-                            <td>{{ assignment.end_date.strftime('%Y-%m-%d') if assignment.end_date else 'Ongoing' }}</td>
-                            <td>{{ assignment.gps_position }}</td>
-                            <td>{{ assignment.geofence_violations }}</td>
-                            <td>
-                                <a href="{{ url_for('edit_assignment', assignment_id=assignment.id) }}" 
-                                   class="btn btn-sm btn-warning">
-                                    <i class="fa-solid fa-pen-to-square"></i> Edit
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Vehicle</th>
+                        <th>Driver</th>
+                        <th>Work Place</th>
+                        <th>GPS Position</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in assignments %}
+                    <tr>
+                        <td>{{ assignment.vehicle.plate_number }}</td>
+                        <td>{{ assignment.driver.name }}</td>
+                        <td>{{ assignment.work_place }}</td>
+                        <td>{{ assignment.gps_position }}</td>
+                        <td>{{ assignment.start_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ assignment.end_date.strftime('%Y-%m-%d') if assignment.end_date else 'Active' }}</td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="/assignments/edit/{{ assignment.id }}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-edit"></i>
                                 </a>
-                                <a href="{{ url_for('delete_assignment', assignment_id=assignment.id) }}" 
-                                   class="btn btn-sm btn-danger"
+                                <a href="/assignments/delete/{{ assignment.id }}" class="btn btn-sm btn-danger" 
                                    onclick="return confirm('Are you sure you want to delete this assignment?');">
-                                    <i class="fa-solid fa-trash"></i> Delete
+                                    <i class="fas fa-trash"></i>
                                 </a>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="8" class="text-center">No assignments found</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4">No assignments found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Assignment Modal -->
+<div class="modal fade" id="addAssignmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Add New Assignment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
+            <form method="POST" action="/assignments">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Select Vehicle</label>
+                            <select class="form-select" name="plate_number" required>
+                                <option value="" selected disabled>Select Vehicle</option>
+                                {% for vehicle in vehicles %}
+                                <option value="{{ vehicle.plate_number }}">
+                                    {{ vehicle.plate_number }} ({{ vehicle.make }} {{ vehicle.model }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Select Driver</label>
+                            <select class="form-select" name="driver_id" required>
+                                <option value="" selected disabled>Select Driver</option>
+                                {% for driver in drivers %}
+                                <option value="{{ driver.id }}">{{ driver.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Work Place (City)</label>
+                        <select class="form-select" id="work_place" name="work_place" required>
+                            <option value="" selected disabled>Select City</option>
+                            {% for city in cities %}
+                            <option value="{{ city }}">{{ city }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">GPS Location Preview</label>
+                        <div id="gps-map" class="gps-map">
+                            <p class="text-muted">Select a city to see GPS location</p>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" class="form-control" name="start_date" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">End Date (Optional)</label>
+                            <input type="date" class="form-control" name="end_date">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Geofence Violations</label>
+                        <input type="number" class="form-control" name="geofence_violations" value="0" min="0">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Assignment</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
