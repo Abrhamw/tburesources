@@ -75,7 +75,7 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script>
     // Initialize the map
     const map = L.map('map').setView([{{ assignment.gps_position}}], 13);
