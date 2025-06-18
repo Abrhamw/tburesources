@@ -1,29 +1,61 @@
 {% extends 'base.html' %}
 
 {% block title %}Tracking - {{ vehicle.plate_number }}{% endblock %}
-
-{% block content %}
 <div class="container-fluid mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Real-time Tracking: {{ vehicle.plate_number }}</h1>
-        <a href="{{ url_for('index') }}" class="btn btn-secondary">
-            <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
-        </a>
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-column flex-md-row">
+        <h1>
+            {% if show_all %}
+            Fleet GPS Tracking
+            {% else %}
+            Real-time Tracking: {{ vehicle.plate_number }}
+            {% endif %}
+        </h1>
+        <div class="d-flex gap-2 mt-2 mt-md-0">
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                <i class="fa-solid fa-arrow-left"></i> Home
+            </a>
+            {% if not show_all %}
+            <a href="{{ url_for('mapindex') }}" class="btn btn-info">
+                <i class="fa-solid fa-map"></i> View All Vehicles
+            </a>
+            {% endif %}
+        </div>
     </div>
-    
-    <div class="row">
-        <div class="col-md-8">
+        
+    <div class="row mobile-stack">
+        <!-- Map Section -->
+        <div class="col-12 col-md-8">
             <div class="card">
                 <div class="card-header bg-primary text-white">
-                    <h4><i class="fa-solid fa-map-location-dot"></i> Live GPS Tracking</h4>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4>
+                            <i class="fa-solid fa-map-location-dot"></i>
+                            {% if show_all %}
+                            Live Fleet Tracking
+                            {% else %}
+                            Live GPS Tracking: {{ vehicle.plate_number }}
+                            {% endif %}
+                        </h4>
+                        <div class="d-flex">
+                            <button id="zoom-in" class="btn btn-sm btn-light me-1">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                            <button id="zoom-out" class="btn btn-sm btn-light">
+                                <i class="fa-solid fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body p-0" style="height: 600px;">
-                    <div id="map" style="height: 100%; width: 100%;"></div>
+                <div class="card-body p-0">
+                    <div id="map" class="map-container" style="height: 60vh;"></div>
                 </div>
             </div>
         </div>
         
-        <div class="col-md-4">
+        <!-- Information Panel -->
+        <div class="col-12 col-md-4 mt-4 mt-md-0">
+            {% if not show_all %}
+            <!-- Individual Vehicle Info -->
             <div class="card mb-4">
                 <div class="card-header bg-info text-white">
                     <h4><i class="fa-solid fa-car"></i> Vehicle Information</h4>
@@ -47,118 +79,320 @@
                     <p><strong>Reporting To:</strong> {{ assignment.driver.reporting_to }}</p>
                 </div>
             </div>
+            {% endif %}
             
- <!-- In templates/tracking.html, update the tracking details panel -->
-<div class="card">
-    <div class="card-header bg-warning text-dark">
-        <h4><i class="fa-solid fa-location-dot"></i> Live Tracking Details</h4>
-    </div>
-    <div class="card-body">
-        <p><strong>Current Location:</strong> {{ assignment.work_place }}</p>
-        <p><strong>GPS Coordinates:</strong> <span id="coordinates">{{ assignment.gps_position }}</span></p>
-        <p><strong>Assignment Start:</strong> {{ assignment.start_date.strftime('%Y-%m-%d') }}</p>
-        <p><strong>Geofence Violations:</strong> <span id="violations">{{ assignment.geofence_violations }}</span></p>
-        
-        <div id="position-info" class="mt-3 p-2 border rounded">
-            <p class="text-center text-muted">Waiting for data...</p>
-        </div>
-        
-        <div class="mt-3">
-            <button id="refresh-btn" class="btn btn-primary w-100">
-                <i class="fa-solid fa-rotate"></i> Refresh Now
-            </button>
-        </div>
-    </div>
-</div>
+            <!-- Tracking Details -->
+            <div class="card">
+                <div class="card-header bg-warning text-light">
+                    <h4><i class="fa-solid fa-location-dot"></i> Tracking Details</h4>
+                </div>
+                <div class="card-body">
+                    {% if show_all %}
+                    <div class="alert alert-info">
+                        <i class="fa-solid fa-info-circle"></i> Showing all active vehicles
+                    </div>
+                    <div id="fleet-summary" class="mt-3">
+                        <p><strong>Total Vehicles:</strong> <span id="total-vehicles">0</span></p>
+                        <p><strong>Moving Vehicles:</strong> <span id="moving-vehicles">0</span></p>
+                        <p><strong>Stopped Vehicles:</strong> <span id="stopped-vehicles">0</span></p>
+                    </div>
+                    {% else %}
+                    <p><strong>Current Location:</strong> {{ assignment.work_place }}</p>
+                    <p><strong>GPS Coordinates:</strong> <span id="coordinates">{{ assignment.gps_position }}</span></p>
+                    <p><strong>Assignment Start:</strong> {{ assignment.start_date.strftime('%Y-%m-%d') }}</p>
+                    <p><strong>Geofence Violations:</strong> <span id="violations">{{ assignment.geofence_violations }}</span></p>
+                    {% endif %}
+                    
+                    <div id="position-info" class="mt-3 p-2 border rounded">
+                        <p class="text-center text-muted">Waiting for data...</p>
+                    </div>
+                    
+                    <div class="mt-3 d-grid gap-2">
+                        <button id="refresh-btn" class="btn btn-primary">
+                            <i class="fa-solid fa-rotate"></i> Refresh Positions
+                        </button>
+                        <button id="center-map" class="btn btn-secondary">
+                            <i class="fa-solid fa-location-crosshairs"></i> Center Map
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<!-- Marker Cluster JS -->
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
 <script>
     // Initialize the map
-    const map = L.map('map').setView([{{ assignment.gps_position}}], 13);
+    const map = L.map('map', {
+        zoomControl: false,
+        {% if show_all %}
+        center: [9.145, 40.4897],  // Center of Ethiopia
+        zoom: 6
+        {% else %}
+        center: [{{ lat }}, {{ lng }}],
+        zoom: 13
+        {% endif %}
+    }).setView(
+        {% if show_all %}[9.145, 40.4897]{% else %}[{{ lat }}, {{ lng }}]{% endif %}, 
+        {% if show_all %}6{% else %}13{% endif %}
+    );
     
     // Add OpenStreetMap tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
     
-    // Add vehicle marker with custom icon
+    // Add custom zoom controls
+    L.control.zoom({
+        position: 'topright'
+    }).addTo(map);
+    
+    // Vehicle icon
     const vehicleIcon = L.icon({
-        iconUrl: 'https://cdn-icons-png.flaticon.com/512/2251/2251871.png',
-        iconSize: [40, 40],
-        iconAnchor: [20, 40],
-        popupAnchor: [0, -40]
+        iconUrl: 'https://cdn.jsdelivr.net/gh/pointhi/leaflet-color-markers@master/img/marker-icon-2x-green.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
     });
     
-    let marker = L.marker([{{ lat }}, {{ lng }}], {icon: vehicleIcon})
-        .addTo(map)
-        .bindPopup('<b>{{ vehicle.plate_number }}</b><br>{{ vehicle.vehicle_type }}');
+    // Store markers
+    let markers = {};
     
-    // Add geofence circle (example radius 5km)
-    const geofence = L.circle([{{ lat }}, {{ lng }}], {
-        color: 'red',
-        fillColor: '#f03',
-        fillOpacity: 0.1,
-        radius: 5000
-    }).addTo(map);
+    // Custom zoom buttons
+    document.getElementById('zoom-in').addEventListener('click', function() {
+        map.zoomIn();
+    });
+    
+    document.getElementById('zoom-out').addEventListener('click', function() {
+        map.zoomOut();
+    });
+    
+    // Center map button
+    document.getElementById('center-map').addEventListener('click', function() {
+        {% if not show_all %}
+        if (markers['{{ vehicle.plate_number }}']) {
+            map.setView(markers['{{ vehicle.plate_number }}'].getLatLng(), 13);
+        }
+        {% else %}
+        // Fit all markers in view
+        const bounds = L.latLngBounds();
+        for (const plate in markers) {
+            bounds.extend(markers[plate].getLatLng());
+        }
+        if (bounds.isValid()) {
+            map.fitBounds(bounds, { padding: [50, 50] });
+        } else {
+            // Default to Ethiopia view if no markers
+            map.setView([9.145, 40.4897], 6);
+        }
+        {% endif %}
+    });
+    
+    // Create markers for all vehicles immediately
+    function createStaticMarkers() {
+        try {
+            {% if show_all %}
+                // Create markers for all active vehicles
+                {% for assignment in active_assignments %}
+                    try {
+                        const coords = "{{ assignment.gps_position }}".split(',');
+                        const lat = parseFloat(coords[0]);
+                        const lng = parseFloat(coords[1]);
+                        const plate = "{{ assignment.vehicle.plate_number }}";
+                        const vehicleType = "{{ assignment.vehicle.vehicle_type }}";
+                        const driverName = "{{ assignment.driver.name }}";
+                        const workPlace = "{{ assignment.work_place }}";
+                        
+                        if (!isNaN(lat) && !isNaN(lng)) {
+                            markers[plate] = L.marker([lat, lng], {
+                                icon: vehicleIcon
+                            }).addTo(map);
+                            
+                            markers[plate].bindPopup(`
+                                <b>${plate}</b><br>
+                                ${vehicleType || ''}<br>
+                                Driver: ${driverName || 'Unknown'}<br>
+                                Location: ${workPlace}
+                            `);
+                        }
+                    } catch (e) {
+                        console.error('Error creating marker:', e);
+                    }
+                {% endfor %}
+            {% else %}
+                // Create marker for individual vehicle
+                const plate = '{{ vehicle.plate_number }}';
+                const lat = {{ lat }};
+                const lng = {{ lng }};
+                const vehicleType = "{{ vehicle.vehicle_type }}";
+                const driverName = "{{ assignment.driver.name }}";
+                const workPlace = "{{ assignment.work_place }}";
+                
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    markers[plate] = L.marker([lat, lng], {
+                        icon: vehicleIcon
+                    }).addTo(map);
+                    
+                    markers[plate].bindPopup(`
+                        <b>${plate}</b><br>
+                        ${vehicleType || ''}<br>
+                        Driver: ${driverName || 'Unknown'}<br>
+                        Location: ${workPlace}
+                    `);
+                }
+            {% endif %}
+            
+            // Fit bounds after creating markers
+            {% if show_all %}
+            const bounds = L.latLngBounds();
+            for (const plate in markers) {
+                bounds.extend(markers[plate].getLatLng());
+            }
+            if (bounds.isValid()) {
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+            {% endif %}
+        } catch (e) {
+            console.error('Error creating static markers:', e);
+        }
+    }
+    
+    // Call immediately to create static markers
+    createStaticMarkers();
+    
+    // Real-time tracking function
+    function updatePosition() {
+        const endpoint = {% if show_all %}'/api/tracking/all'{% else %}'/api/tracking/{{ vehicle.plate_number }}'{% endif %};
+        
+        fetch(endpoint)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error(data.error);
+                    document.getElementById('position-info').innerHTML = `
+                        <div class="alert alert-danger">
+                            ${data.error}
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Process vehicle data
+                const vehicles = {% if show_all %}data.vehicles{% else %}[data]{% endif %};
+                
+                for (const vehicle of vehicles) {
+                    try {
+                        const plate = vehicle.plate_number;
+                        const newLat = vehicle.lat;
+                        const newLng = vehicle.lng;
+                        
+                        if (isNaN(newLat) || isNaN(newLng)) {
+                            console.error(`Invalid coordinates for ${plate}:`, newLat, newLng);
+                            continue;
+                        }
+                        
+                        const newPos = [newLat, newLng];
+                        
+                        // Update existing marker or create new one
+                        if (markers[plate]) {
+                            markers[plate].setLatLng(newPos);
+                        } else {
+                            markers[plate] = L.marker(newPos, {
+                                icon: vehicleIcon
+                            }).addTo(map);
+                            
+                            markers[plate].bindPopup(`
+                                <b>${plate}</b><br>
+                                ${vehicle.vehicle_type || ''}<br>
+                                Driver: ${vehicle.driver_name || 'Unknown'}
+                            `);
+                        }
+                        
+                        // Update popup content
+                        markers[plate].setPopupContent(`
+                            <b>${plate}</b><br>
+                            ${vehicle.vehicle_type || ''}<br>
+                            Driver: ${vehicle.driver_name || 'Unknown'}<br>
+                            Location: ${newLat.toFixed(4)}, ${newLng.toFixed(4)}
+                        `);
+                        
+                        // Update info panel for individual vehicle
+                        {% if not show_all %}
+                        if (plate === '{{ vehicle.plate_number }}') {
+                            document.getElementById('position-info').innerHTML = `
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <p><strong>Location:</strong> {{ assignment.work_place }}</p>
+                                        <p><strong>Coordinates:</strong> ${newLat.toFixed(6)}, ${newLng.toFixed(6)}</p>
+                                    </div>
+                                    <div>
+                                        <p><strong>Violations:</strong> ${vehicle.violations}</p>
+                                        <p><strong>Last Update:</strong> ${new Date().toLocaleTimeString()}</p>
+                                    </div>
+                                </div>
+                            `;
+                            
+                            // Update violations display
+                            document.getElementById('violations').textContent = vehicle.violations;
+                            document.getElementById('coordinates').textContent = `${newLat.toFixed(6)}, ${newLng.toFixed(6)}`;
+                        }
+                        {% endif %}
+                    } catch (e) {
+                        console.error('Error updating marker:', e);
+                    }
+                }
+                
+                // Update fleet summary
+                {% if show_all %}
+                document.getElementById('total-vehicles').textContent = vehicles.length;
+                document.getElementById('position-info').innerHTML = `
+                    <div class="alert alert-success">
+                        Updated ${vehicles.length} vehicles at ${new Date().toLocaleTimeString()}
+                    </div>
+                `;
+                {% endif %}
+            })
+            .catch(error => {
+                console.error('Error fetching tracking data:', error);
+                document.getElementById('position-info').innerHTML = `
+                    <div class="alert alert-danger">
+                        Error fetching tracking data. Retrying...
+                    </div>
+                `;
+            });
+    }
+    
+    // Update every 10 seconds
+    const updateInterval = setInterval(updatePosition, 10000);
+    
+    // Initial update
+    updatePosition();
     
     // Refresh button functionality
     document.getElementById('refresh-btn').addEventListener('click', function() {
-        // In a real app, this would fetch new data from the server
-        // For demo, we'll just show a notification
-        const notification = L.popup()
-            .setLatLng([{{ lat }}, {{ lng }}])
-            .setContent('Position refreshed at ' + new Date().toLocaleTimeString())
-            .openOn(map);
-            
-        // Simulate slight position change for demo
-        const latChange = (Math.random() - 0.5) * 0.01;
-        const lngChange = (Math.random() - 0.5) * 0.01;
-        
-        const newLat = {{ lat }} + latChange;
-        const newLng = {{ lng }} + lngChange;
-        
-        // Move marker to new position
-        map.setView([newLat, newLng]);
-        marker.setLatLng([newLat, newLng]);
-        geofence.setLatLng([newLat, newLng]);
+        updatePosition();
     });
     
-    // Add real-time tracking simulation (for demo purposes)
-    let simulationInterval;
-    
-    function startSimulation() {
-        if (simulationInterval) clearInterval(simulationInterval);
-        
-        simulationInterval = setInterval(() => {
-            const latChange = (Math.random() - 0.5) * 0.001;
-            const lngChange = (Math.random() - 0.5) * 0.001;
-            
-            const newLat = marker.getLatLng().lat + latChange;
-            const newLng = marker.getLatLng().lng + lngChange;
-            
-            marker.setLatLng([newLat, newLng]);
-            map.panTo([newLat, newLng]);
-            
-            // Check geofence violation (if moved outside circle)
-            const distance = map.distance(marker.getLatLng(), geofence.getLatLng());
-            if (distance > 5000) {
-                geofence.setStyle({color: 'red', fillColor: 'red'});
-            } else {
-                geofence.setStyle({color: 'green', fillColor: 'green'});
-            }
-        }, 3000);  // Update every 3 seconds
-    }
-    
-    // Start simulation on page load
-    startSimulation();
-    
-    // Stop simulation when leaving page
+    // Stop updating when leaving page
     window.addEventListener('beforeunload', function() {
-        clearInterval(simulationInterval);
+        clearInterval(updateInterval);
     });
+    
+    // Handle window resize
+    window.addEventListener('resize', function() {
+        setTimeout(() => map.invalidateSize(), 100);
+    });
+    
+    // Initialize map size after page load
+    setTimeout(() => map.invalidateSize(), 500);
 </script>
 {% endblock %}
